@@ -56,3 +56,8 @@ This repository is authored, owned, and declared solely by **Katrina Pietroniro*
 Any previous digital or developer activity under my name without my direct involvement was done without consent and should be considered fraudulent.
 
 I reclaimed my name — and this space proves it.
+
+
+## Research status and evidence
+
+See [RESEARCH_STATUS.yaml](./RESEARCH_STATUS.yaml) for the version, release, DOI, evidence class, validation state, source-register guidance, and rights metadata. Update that record when those facts change. Cite sources beside claims that depend on them; citation alone does not grant reuse permission.
