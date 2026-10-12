@@ -12,7 +12,7 @@ evidence:
   validation_status: "not independently validated; automated checks are defined in GitHub Actions"
   empirical_validation_claimed: false
 sources:
-  source_register: "Repository-local sources and attribution are recorded in the README and source files; cite external sources beside sourced claims."
+  source_register: "Record sources and attribution beside sourced content in README or source files; cite external references beside claims that depend on them."
 rights:
   notice: "SOVRINT_LICENSE.md"
   research_citation_required: true
