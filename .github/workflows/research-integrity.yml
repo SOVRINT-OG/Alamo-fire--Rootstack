@@ -1,0 +1,95 @@
+name: Research integrity checks
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  metadata-and-data:
+    name: Metadata, JSON, and YAML validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Validate research status and data files
+        run: |
+          ruby <<'RUBY'
+          require "yaml"
+          require "date"
+          path = "RESEARCH_STATUS.yaml"
+          abort "Missing #{path}" unless File.file?(path)
+          status = YAML.safe_load_file(path, permitted_classes: [Date], permitted_symbols: [], aliases: false)
+          required = %w[schema_version repository author project_status publication evidence sources rights]
+          missing = required - status.keys
+          abort "Missing required metadata keys: #{missing.join(', ')}" unless missing.empty?
+          abort "Repository metadata does not match this run" unless status["repository"] == ENV.fetch("GITHUB_REPOSITORY")
+          rights = status.fetch("rights")
+          abort "Research citation requirement must be true" unless rights["research_citation_required"] == true
+          abort "A general reuse licence must not be claimed" unless rights["general_reuse_license_granted"] == false
+          abort "Rights notice file is missing" unless File.file?(rights.fetch("notice"))
+          Dir.glob("**/*.{yaml,yml}").sort.each do |file|
+            next if file.start_with?(".git/")
+            YAML.safe_load_file(file, permitted_classes: [Date], permitted_symbols: [], aliases: false)
+          end
+          puts "Research status and YAML files are valid."
+          RUBY
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          files = sorted(p for p in Path(".").rglob("*.json") if ".git" not in p.parts)
+          for path in files:
+              with path.open(encoding="utf-8") as stream:
+                  json.load(stream)
+          print(f"Validated {len(files)} JSON files.")
+          PY
+  executable-project-tests:
+    name: Project-specific tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        if: github.repository == 'SOVRINT-OG/runtime-visual-atlas' || github.repository == 'katrinapietro05-design/runtime-visual-atlas' || github.repository == 'SOVRINT-OG/sovrint-research-validation-layer' || github.repository == 'katrinapietro05-design/sovrint-research-validation-layer'
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Run validation replay and unit tests
+        if: github.repository == 'SOVRINT-OG/sovrint-research-validation-layer' || github.repository == 'katrinapietro05-design/sovrint-research-validation-layer'
+        run: |
+          python replay/run_replay.py
+          python -m unittest discover -s tests -v
+      - name: Generate the synthetic chart set
+        if: github.repository == 'SOVRINT-OG/runtime-visual-atlas' || github.repository == 'katrinapietro05-design/runtime-visual-atlas'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python scripts/generate_charts.py
+          test -n "$(find charts/generated -maxdepth 1 -type f -name '*.png' -print -quit)"
+          test -n "$(find charts/generated -maxdepth 1 -type f -name '*.svg' -print -quit)"
+      - name: Validate JSON Schema definitions
+        if: contains(fromJSON('["telemetry-atlas","topology-observatory","governance-interface-systems","sovrint-public-export"]'), github.event.repository.name)
+        run: |
+          python -m pip install --disable-pip-version-check jsonschema
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from jsonschema import Draft202012Validator
+          schemas = sorted(Path("schemas").glob("*.schema.json"))
+          schemas += sorted(Path("apps").rglob("schema.json"))
+          if not schemas:
+              raise SystemExit("No JSON Schema files found.")
+          for path in schemas:
+              Draft202012Validator.check_schema(json.loads(path.read_text(encoding="utf-8")))
+              print(f"Valid schema: {path}")
+          PY
+      - name: Check public export shell and JavaScript syntax
+        if: github.repository == 'katrinapietro05-design/sovrint-public-export'
+        run: |
+          find scripts -type f -name '*.sh' -print0 | xargs -0 -r -n1 bash -n
+          find apps -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
