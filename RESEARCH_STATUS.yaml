@@ -1,0 +1,21 @@
+schema_version: "1.0"
+repository: "SOVRINT-OG/Alamo-fire--Rootstack"
+author: "Katrina Pietroniro"
+project_status: "documented-draft"
+publication:
+  version: null
+  release_date: null
+  doi: null
+  doi_status: "none recorded"
+evidence:
+  class: "first-person-provenance-claims"
+  validation_status: "not independently validated; automated checks are defined in GitHub Actions"
+  empirical_validation_claimed: false
+sources:
+  source_register: "Repository-local sources and attribution are recorded in the README and source files; cite external sources beside sourced claims."
+rights:
+  notice: "SOVRINT_LICENSE.md"
+  research_citation_required: true
+  citation_grants_reuse: false
+  general_reuse_license_granted: false
+  third_party_material: "Preserve the applicable original rights notices and licence terms."
